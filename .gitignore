@@ -452,3 +452,4 @@ coverage
 *.njsproj
 *.sln
 *.sw?
+*Thumbs.db
