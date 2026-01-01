@@ -1,10 +1,36 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useState, useTransition } from 'react';
+import reactLogo from './assets/react.svg';
+import viteLogo from '/vite.svg';
+import './App.css';
+
+interface Forecast {
+  date: string;
+  temperatureC: number;
+  temperatureF: number;
+  summary: string;
+};
+
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [count, setCount] = useState(0);
+  const [forecasts, setForecasts] = useState<Forecast[]>();
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    const populateWeatherForecasts = async () => {
+      const response = await fetch('weatherforecast');
+
+      if (response.ok){
+        const data = await response.json();
+        startTransition(() => {
+          setForecasts(data);
+        });
+      }
+    };
+
+    populateWeatherForecasts();
+  }, []);
+
 
   return (
     <>
@@ -18,6 +44,31 @@ function App() {
       </div>
       <h1>Vite + React</h1>
       <div className="card">
+      <div className="weather-forecasts">
+        {isPending && <p>Weather Forecast Loading...</p>}
+        {forecasts && 
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Temp. (C)</th>
+                <th>Temp. (F)</th>
+                <th>Summary</th>
+              </tr>
+            </thead>
+            <tbody>
+              {forecasts.map((forecast, index) => (
+                <tr key={index}>
+                  <td>{new Date(forecast.date).toLocaleDateString()}</td>
+                  <td>{forecast.temperatureC}</td>
+                  <td>{forecast.temperatureF}</td>
+                  <td>{forecast.summary}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        }
+      </div>        
         <button onClick={() => setCount((count) => count + 1)}>
           count is {count}
         </button>

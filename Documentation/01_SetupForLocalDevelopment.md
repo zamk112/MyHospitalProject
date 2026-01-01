@@ -2,7 +2,7 @@
 Now that I have installed the scaffolding for both ASP.NET Core WebApi backend and ReactJS frontend. I want to do a little bit of a cleanup and make sure for starters, everything is going to be running on HTTPs protocol. First going to start off with cleaning up HospitalProject.Server project and then the HospitalProject.Client project.
 
 # HospitalProject.Server (ASP.NET Core Web API)
-## Deleting the HospitalProject.Server.http file
+## Deleting the **HospitalProject.Server.http** file
 First thing I'm going to is delete the **HospitalProject.Server.http**, this file works with Visual Studio but not VS code (at least I can't find a plugin for this as yet). Plus I'm using Bruno to do my testing for API calls. Going to run a PS command (sorry cmd commands is a bit rusty on Windows):  
 ```pwsh
 Remove-Item -Path .\HospitalProject.Server\HospitalProject.Server.http
@@ -99,13 +99,19 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
+  
     builder.Services.AddSerilog((services, lc) => lc
         .ReadFrom.Configuration(builder.Configuration)
         .ReadFrom.Services(services)
         .Enrich.FromLogContext()
     );
+    
     builder.Services.AddControllers();
-    builder.Services.AddOpenApi();
+
+    if (builder.Environment.IsDevelopment())
+    {
+        builder.Services.AddOpenApi();
+    }
 
     var app = builder.Build();
     app.UseSerilogRequestLogging();
@@ -141,7 +147,16 @@ Log.Logger = new LoggerConfiguration()
     .CreateBootstrapLogger();
 ```
 
-I had to move some stuff around, because I am using `try-catch-finally` block because if the app stops running or the user stops the app the logs needs to be closed and the buffer needs to be flushed out with `Log.CloseAndFlush();`. But I followed the two-stage initialization first by creating a bootstrap with `.CreateBootstrapLogger();` when I'm intialising the logger and then adding SerialLog as a service to replace the original logger completely once the host is loaded with:  
+I had to move some stuff around, because I am using `try-catch-finally` block because if the app stops running or the user stops the app the logs needs to be closed and the buffer needs to be flushed out with `Log.CloseAndFlush();`. Before I go on about the logger configuration, I wrapped the `app.MapOpenApi();` in an `if` statement and make sure it is only initialised in development mode.  
+```csharp
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddOpenApi();
+}
+...
+```
+
+I don't like to add unnecessary things for the production build. But going back to the logger configuration, I followed the two-stage initialization first by creating a bootstrap with `.CreateBootstrapLogger();` when I'm intialising the logger and then adding SerialLog as a service to replace the original logger completely once the host is loaded with:  
 ```csharp
     builder.Services.AddSerilog((services, lc) => lc
         .ReadFrom.Configuration(builder.Configuration)
@@ -150,7 +165,7 @@ I had to move some stuff around, because I am using `try-catch-finally` block be
     );
 ```
 
-And lastly, you add your Serilog middleware with `app.UseSerilogRequestLogging();` just before the initialisation of the `app` variable.
+And lastly, I added the Serilog middleware with `app.UseSerilogRequestLogging();` just before the initialisation of the `app` variable.
 
 I like doing configuration from configuration files as much as possible. So in my [appsettings.Development.json](../HospitalProject.Server/appsettings.Development.json), this is the config that I have added to log stuff out to both console and to a log file:  
 ```json
@@ -209,7 +224,426 @@ And in [appsettings.json](../HospitalProject.Server/appsettings.json), I'm just 
 
 I don't know if this is considered global logging but it is logging everything from when the host starts. And when you call `AddSerilog()`, it registers it as a singleton. But for now, logging is good to go.
 
+### Adding HTTP Logging Middleware
+Since I'm trying to implement a reverse proxy setup with my web application stack. For debugging purposes I also added the `AddHttpLogging()` and `UseHttpLogging()` to capture my request for debugging later. At the moment it is setup for development mode.  
+```csharp
+    var builder = WebApplication.CreateBuilder(args);
+
+    Log.Logger = new LoggerConfiguration()
+        .ReadFrom.Configuration(builder.Configuration)
+        .Enrich.FromLogContext()
+        .CreateBootstrapLogger();
+
+    if (builder.Environment.IsDevelopment())
+    {
+        builder.Services.AddHttpLogging(o => { }); // Development mode only
+    }
+    ...
+    var app = builder.Build();
+    app.UseSerilogRequestLogging();
+
+    Log.Information("Application started! Logging to both console and file.");
+
+    // Configure the HTTP request pipeline.
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseHttpLogging(); // In development mode only
+        app.MapOpenApi();
+    }
+```
+The outputs will appear in the console and logs as well which shows something like this:  
+```cmd
+
+2025-12-31 22:15:14 [INF] Request:
+Protocol: HTTP/1.1
+Method: GET
+Scheme: https
+PathBase: 
+Path: /weatherforecast
+Accept: application/json, text/plain, */*
+Connection: keep-alive
+Host: localhost:7276
+User-Agent: bruno-runtime/2.15.1
+Accept-Encoding: gzip, compress, deflate, br
+request-start-time: [Redacted]
+2025-12-31 22:15:14 [INF] Executing endpoint 'HospitalProject.Server.Controllers.WeatherForecastController.Get (HospitalProject.Server)'
+2025-12-31 22:15:15 [INF] Route matched with {action = "Get", controller = "WeatherForecast"}. Executing controller action with signature System.Collections.Generic.IEnumerable`1[HospitalProject.Server.WeatherForecast] Get() on controller HospitalProject.Server.Controllers.WeatherForecastController (HospitalProject.Server).
+2025-12-31 22:15:15 [INF] Executing ObjectResult, writing value of type 'HospitalProject.Server.WeatherForecast[]'.
+2025-12-31 22:15:15 [INF] Executed action HospitalProject.Server.Controllers.WeatherForecastController.Get (HospitalProject.Server) in 44.1933ms
+2025-12-31 22:15:15 [INF] Executed endpoint 'HospitalProject.Server.Controllers.WeatherForecastController.Get (HospitalProject.Server)'
+2025-12-31 22:15:15 [INF] Response:
+StatusCode: 200
+Content-Type: application/json; charset=utf-8
+Date: Wed, 31 Dec 2025 11:15:14 GMT
+Server: Kestrel
+Transfer-Encoding: chunked
+2025-12-31 22:15:15 [INF] HTTP GET /weatherforecast responded 200 in 84.0014 ms
+2025-12-31 22:15:15 [INF] Request finished HTTP/1.1 GET https://localhost:7276/weatherforecast - 200 null application/json; charset=utf-8 115.435
+```
+
+## Bruno Does not trust the Certificate Trust Store in Windows
+I was initially documenting how to generate a pem certificate file and add it Certificate to Bruno but unfortunately, Bruno does not trust the certificate trust store as per [Unable to verify the first certificate, self-signed certificate not working? · Issue #4949 · usebruno/bruno](https://github.com/usebruno/bruno/issues/4949). And it appears neither does Postman. So I'll have to change gears later down the track when I have front end and backend working together with a proxy setup and use Python to do the API calls. But for now Bruno does the job so still will use and if they fix it even better 😊.
+
+## Adding CORS
+I'm going to add CORS to only allow certain URLs access the APIs for local development. We'll need to come back and end for IIS Express and for IIS.  
+```csharp
+...
+try
+{
+    if (builder.Environment.IsDevelopment())
+    {
+        builder.Services.AddHttpLogging(o => { });
+    }
+
+    builder.Services.AddSerilog((services, lc) => lc
+        .ReadFrom.Configuration(builder.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+    );
+
+    builder.Services.AddCors(options =>
+    {
+        options.AddDefaultPolicy(policy =>
+        {
+            policy.WithOrigins("https://localhost:5173", "https://localhost:7276") 
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+    });
+    ...
+    var app = builder.Build();
+    ...
+    app.UseHttpsRedirection();
+    app.UseCors();
+    ...
+}
+...
+``` 
+
+At the moment, I'm just allowing everything on the local dev setup. I don't want any funny business outside from my VM, since I'm running everything from the inside. 
+
+# Vite SSL configuration for ReactJS Frontend
+When I ran `npm run dev`, it's running with the HTTP protocol:  
+```cmd
+> npm run dev                                                                           
+
+> hospitalproject-client@0.0.0 dev
+> vite
+
+
+  VITE v7.3.0  ready in 3121 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+```
+
+And Edge is complaining my website is *not secure*:  
+![Edge saying my website is not secure.... Oh no 😭](./images/Screenshot%202026-01-01%20at%2012.26.02 am.png)
+
+Lets make it sure and get started for configuration Vite with SSL configuration for hosting the ReactJS frontend!
+
+## SSL certificate generation
+First thing I need to do is to generate the SSL pem certificate and store it somewhere.  I'm going to put it in my **%LOCALAPPDATA%\ASP.NET\https** folder. And I'm going to generate the certificate with the dotnet tool with the following command (Sorry, using PowerShell, I know looks horrible, kinda rusty with cmd script):  
+```pwsh
+if (-not(Test-Path -LiteralPath $env:LOCALAPPDATA\ASP.NET\https\hospitalproject.client.pem -PathType Leaf) -or 
+    -not(Test-Path -LiteralPath $env:LOCALAPPDATA\ASP.NET\https\hospitalproject.client.key -PathType Leaf)) 
+{ 
+    if (-not(Test-Path -LiteralPath $env:LOCALAPPDATA\ASP.NET\https -PathType Container))
+    {
+       New-Item -Path $env:LOCALAPPDATA\ASP.NET\https -ItemType Directory
+    }
+    "dotnet dev-certs https -ep $($env:LOCALAPPDATA)\ASP.NET\https\hospitalproject.client.pem --format pem -np" | cmd 
+} 
+```
+
+This should generate a **\*.pem** and **\*.key** file in the directory:  
+```pwsh
+> Get-ChildItem $env:LOCALAPPDATA\ASP.NET\https              
+
+    Directory: C:\Users\zamk1\AppData\Local\ASP.NET\https
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          31/12/2025 11:53 PM           1703 hospitalproject.client.key
+-a---          31/12/2025 11:53 PM           1349 hospitalproject.client.pem
+```
+
+At the moment the **vite.config.ts** file looks pretty barren.  
+```ts
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [
+    react({
+      babel: {
+        plugins: [['babel-plugin-react-compiler']],
+      },
+    }),
+  ],
+})
+
+```
+
+But it will get bigger in the next section (just a little bit).
+
+## Updating **vite.config.ts** file
+### Adding SSL encryption to website
+Now I need to start modifying **vite.config.ts** file and make the site hosting with SSL enabled. The first thing I need to is check if the directory contains my certificates, if it does great, if it doesn't vite should throw an error not start the server.  
+
+```ts
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'node:path';
+import fs from 'node:fs';
+
+const certName = 'hospitalproject.client';
+const certFolder = path.join(`${process.env.LOCALAPPDATA}`, 'ASP.NET', 'https');
+const certPath = path.join(certFolder, `${certName}.pem`);
+const keyPath = path.join(certFolder, `${certName}.key`);
+
+if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
+  throw new Error('Development certificate not found.');
+}
+...
+```
+
+The first part is done. Using `path.join` to build my directory and file paths and then checking it with `fs.existsSync` if the certificates exists, if it doesn't it will throw an error. The next part is to make the ReactJS frontend use SSL and use HTTPS.  
+
+```ts
+...
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [
+    react({
+      babel: {
+        plugins: [['babel-plugin-react-compiler']],
+      },
+    }),
+  ],
+  server: {
+    port: 5173,
+    https: {
+      key: fs.readFileSync(keyPath),
+      cert: fs.readFileSync(certPath),
+    },
+  },
+```
+
+I kept the port the same as what you get when you create a ReactJS (TypeScript) project, but you don't have to add it because it defaults to this port anyways (I just have bad memory and forget where the port number comes from so I documented it 😅). But I had to reference my SSL pem and key files to it. When I run the `npm run dev` command, I'm getting an output like this.  
+```cmd
+> npm run dev
+
+> hospitalproject-client@0.0.0 dev
+> vite
+
+
+  VITE v7.3.0  ready in 1053 ms
+
+  ➜  Local:   https://localhost:5173/
+  ➜  Local:   https://vite.dev.localhost:5173/
+  ➜  Local:   https://vite.dev.internal:5173/
+  ➜  Local:   https://host.docker.internal:5173/
+  ➜  Local:   https://host.containers.internal:5173/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+``` 
+
+Everything now is running with HTTPS protocol so far good. When I click the `https://localhost:5173/` url, I can see now that Edge is saying the website is secure.  
+![Website now secure 👍](./images/Screenshot%202026-01-01%20at%203.59.23 pm.png)
+
+### Setting up the Proxy to backend API calls
+The next thing is to setup a proxy for the backend to be called.  
+```ts
+...
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [
+    react({
+      babel: {
+        plugins: [['babel-plugin-react-compiler']],
+      },
+    }),
+  ],
+  server: {
+    port: 5173,
+    https: {
+      key: fs.readFileSync(keyPath),
+      cert: fs.readFileSync(certPath),
+    },
+    proxy: {
+      '^/weatherforecast': {
+        target: target,
+        secure: true,
+      },      
+    },
+  },
+})
+```
+
+As you can see I have added a `proxy` configuration where it takes in a `Record<string, string | ProxyOptions>` type. The `target` is the URL for my ASP.NET Core backend endpoint. I set the `secure` property to `true` so it has to do SSL validation. The `'^/weatherforecast'` is a regex expression where it makes sure that the beginning starts with '/'. Going forward when I create more controllers with different endpoints. I need to map it to this `proxy` config in **vite.config.ts**. 
+
+Before I go any further I need to add some code to **App.tsx** to do an API calls to the *weatherforcast* endpoint. 
+
+### Adding some code in **App.tsx**
+This is my front end code for doing an API call to *weatherforcast* endpoint.  
+```tsx
+import { useEffect, useState, useTransition } from 'react';
+...
+
+interface Forecast {
+  date: string;
+  temperatureC: number;
+  temperatureF: number;
+  summary: string;
+};
+
+function App() {
+  const [count, setCount] = useState(0);
+  const [forecasts, setForecasts] = useState<Forecast[]>();
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    const populateWeatherForecasts = async () => {
+      const response = await fetch('weatherforecast');
+
+      if (response.ok){
+        const data = await response.json();
+        startTransition(() => {
+          setForecasts(data);
+        });
+      }
+    };
+
+    populateWeatherForecasts();
+  }, []);
+
+
+  return (
+    <>
+      ...
+      <div className="weather-forecasts">
+        {isPending && <p>Weather Forecast Loading...</p>}
+        {forecasts && 
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Temp. (C)</th>
+                <th>Temp. (F)</th>
+                <th>Summary</th>
+              </tr>
+            </thead>
+            <tbody>
+              {forecasts.map((forecast, index) => (
+                <tr key={index}>
+                  <td>{new Date(forecast.date).toLocaleDateString()}</td>
+                  <td>{forecast.temperatureC}</td>
+                  <td>{forecast.temperatureF}</td>
+                  <td>{forecast.summary}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        }
+      </div>        
+      ...
+    </>
+  )
+}
+...
+```
+
+Nothing too fancy very similar to what you get in the scaffolded code when you create a new project in Visual Code 2022 (my code and the VS 2022 scaffolded code has a problem where it calls the API endpoint twice because ReactJs is running on **strict** mode, which I will fix later and yes not going to disable **strict** mode when I do the fix, but now good enough for now). As you can see when I call `fetch()`, I'm not passing the entire URL to my backend endpoint. Just `weatherforecast`. If I launch both back and front together, there is a problem! My `<table>` did not get rendered!  
+![Webpage Loaded, but no table rendered](./images/Screenshot%202026-01-01%20at%209.06.25 pm.png)  
+
+I'm going to open up the developer tool, refresh the page and see what's happening:  
+![HTTP 500 error](./images/Screenshot%202026-01-01%20at%209.09.41 pm.png)
+
+Oh no!, getting HTTP 500 error, I'm going to have a look at the output on the console of my ASP.NET Core app.  
+```cmd
+------------------------------------------------------------------------------
+You may only use the Microsoft Visual Studio .NET/C/C++ Debugger (vsdbg) with
+Visual Studio Code, Visual Studio or Visual Studio for Mac software to help you
+develop and test your applications.
+------------------------------------------------------------------------------
+2026-01-01 21:05:46 [INF] Application started! Logging stuff now!.
+2026-01-01 21:05:47 [INF] Now listening on: https://localhost:7276
+2026-01-01 21:05:47 [INF] Application started. Press Ctrl+C to shut down.
+2026-01-01 21:05:47 [INF] Hosting environment: Development
+2026-01-01 21:05:47 [INF] Content root path: Z:\Projects\MyHospitalProject\HospitalProject.Server
+```
+
+No APIs calls made, so it's because it's failing at the front end with SSL validation. Let's see what the error message says:  
+```cmd
+> npm run dev
+
+> hospitalproject-client@0.0.0 dev
+> vite
+
+
+  VITE v7.3.0  ready in 678 ms
+
+  ➜  Local:   https://localhost:5173/
+  ➜  Local:   https://vite.dev.localhost:5173/
+  ➜  Local:   https://vite.dev.internal:5173/
+  ➜  Local:   https://host.docker.internal:5173/
+  ➜  Local:   https://host.containers.internal:5173/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+9:06:11 pm [vite] http proxy error: /weatherforecast
+Error: self-signed certificate; if the root CA is installed locally, try running Node.js with --use-system-ca
+    at TLSSocket.onConnectSecure (node:_tls_wrap:1631:34)
+    at TLSSocket.emit (node:events:508:28)
+    at TLSSocket._finishInit (node:_tls_wrap:1077:8)
+    at ssl.onhandshakedone (node:_tls_wrap:863:12)
+```
+
+The problem is with NodeJS, well it's not really a problem more like a config issue. But basically at the moment NodeJS doesn't trust the Windows system trust store, where the ASP.NET Core developer certificate sits. The is simple, which I will explain in the next section. 
+
+### How make NodeJS trust the Windows System trust store
+So as the error says `try running Node.js with --use-system-ca`, but I'm running a npm command which the npm executes for me, so I can't really use `--use-system-ca` flag (and I tried 😅, you guys can tell me I'm wrong, maybe I did something wrong here). But I managed to get it to work in 2 ways:  
+1. By PowerShell environment variables. In VS Code, if your terminal is a PowerShell terminal, before running the `npm run dev` command you need to run `$env:NODE_USE_SYSTEM_CA=1` first and then run `npm run dev` command.
+2. You edit your environment variables and yes it will work under the user environment variables and the environment variables as per below.  
+   ![Adding a user environment variable](./images/Screenshot%202026-01-01%20at%209.29.10 pm.png)
+
+And now if you run it, it should be fine.
+![Table now rendered on page](./images/Screenshot%202026-01-01%20at%209.33.04 pm.png)
+
+No errors in the terminal.  
+```cmd
+> $env:NODE_USE_SYSTEM_CA=1
+> npm run dev    
+
+> hospitalproject-client@0.0.0 dev
+> vite
+
+
+  VITE v7.3.0  ready in 725 ms
+
+  ➜  Local:   https://localhost:5173/
+  ➜  Local:   https://vite.dev.localhost:5173/
+  ➜  Local:   https://vite.dev.internal:5173/
+  ➜  Local:   https://host.docker.internal:5173/
+  ➜  Local:   https://host.containers.internal:5173/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+```
+
+I went with option one, option two might be better but I don't like adding environment variables if I don't have to. Vite is using the [http-proxy-3](https://github.com/sagemathinc/http-proxy-3), which is a nodeJS package, even though they said set `secure` to `false` for self-signed certificates, since it is using the NodeJS as it's runtime and how now you can 🎉.
+
+One more thing I'd like to mention, when NodeJS implemented this fix; they're following the [Chromium's policy](https://chromium.googlesource.com/chromium/src/+/main/net/data/ssl/chrome_root_store/faq.md#how-does-the-chrome-certificate-verifier-integrate-with-platform-trust-stores-for-local-trust-decisions) of where the certificates will be stored. I also checked as well. The certificates are in *Trust -> Trusted Root Certification Authorities* under the user profile. If this doesn't work for you this is the first place I'd check.  
+
 # References
 * [Configure endpoints for the ASP.NET Core Kestrel web server | Microsoft Learn](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/kestrel/endpoints?view=aspnetcore-10.0)
 * [serilog/serilog-aspnetcore: Serilog integration for ASP.NET Core](https://github.com/serilog/serilog-aspnetcore?tab=readme-ov-file)
 * [serilog/serilog-settings-configuration: A Serilog configuration provider that reads from Microsoft.Extensions.Configuration](https://github.com/serilog/serilog-settings-configuration)
+* [HTTP logging in .NET and ASP.NET Core | Microsoft Learn](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/http-logging/?view=aspnetcore-10.0)
+* [Unable to verify the first certificate, self-signed certificate not working? · Issue #4949 · usebruno/bruno](https://github.com/usebruno/bruno/issues/4949)
+* [Server Options | Vite<](https://vite.dev/config/server-options#server-https)
+* [sagemathinc/http-proxy-3: Modern rewrite of node-proxy (the original nodejs http proxy server)](https://github.com/sagemathinc/http-proxy-3?tab=readme-ov-file#options)
+* [Node.js — Enterprise Network Configuration](https://nodejs.org/en/learn/http/enterprise-network-configuration#adding-ca-certificates-from-the-system-store)
+* [Node.js — Node.js v23.8.0 (Current)](https://nodejs.org/en/blog/release/v23.8.0)
+* [Frequently Asked Questions](https://chromium.googlesource.com/chromium/src/+/main/net/data/ssl/chrome_root_store/faq.md#how-does-the-chrome-certificate-verifier-integrate-with-platform-trust-stores-for-local-trust-decisions)
