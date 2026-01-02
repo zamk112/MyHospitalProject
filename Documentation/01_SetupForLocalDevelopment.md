@@ -490,7 +490,7 @@ Before I go any further I need to add some code to **App.tsx** to do an API call
 ### Adding some code in **App.tsx**
 This is my front end code for doing an API call to *weatherforcast* endpoint.  
 ```tsx
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState, useRef, useTransition } from 'react';
 ...
 
 interface Forecast {
@@ -504,22 +504,24 @@ function App() {
   const [count, setCount] = useState(0);
   const [forecasts, setForecasts] = useState<Forecast[]>();
   const [isPending, startTransition] = useTransition();
+  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
     const populateWeatherForecasts = async () => {
       const response = await fetch('weatherforecast');
-
-      if (response.ok){
+      if (response.ok) {
         const data = await response.json();
         startTransition(() => {
           setForecasts(data);
         });
       }
     };
-
+    
     populateWeatherForecasts();
   }, []);
-
 
   return (
     <>
@@ -556,7 +558,9 @@ function App() {
 ...
 ```
 
-Nothing too fancy very similar to what you get in the scaffolded code when you create a new project in Visual Code 2022 (my code and the VS 2022 scaffolded code has a problem where it calls the API endpoint twice because ReactJs is running on **strict** mode, which I will fix later and yes not going to disable **strict** mode when I do the fix, but now good enough for now). As you can see when I call `fetch()`, I'm not passing the entire URL to my backend endpoint. Just `weatherforecast`. If I launch both back and front together, there is a problem! My `<table>` did not get rendered!  
+Nothing too fancy very similar to what you get in the scaffolded code when you create a new project in Visual Code 2022. As you can see when I call `fetch()`, I'm not passing the entire URL to my backend endpoint. Just `weatherforecast` and using `useRef()` so that `fetch()` does not get triggered twice because ReactJS is in **strict** mode. I wanted to see how `useTransition()` works now and instead of doing it the old way of using a ternary operator of rending elements too 😊. 
+
+If I launch both back and front together, there is a problem! My `<table>` did not get rendered!  
 ![Webpage Loaded, but no table rendered](./images/Screenshot%202026-01-01%20at%209.06.25 pm.png)  
 
 I'm going to open up the developer tool, refresh the page and see what's happening:  
@@ -632,7 +636,7 @@ No errors in the terminal.
   ➜  press h + enter to show help
 ```
 
-I went with option one, option two might be better but I don't like adding environment variables if I don't have to. Vite is using the [http-proxy-3](https://github.com/sagemathinc/http-proxy-3), which is a nodeJS package, even though they said set `secure` to `false` for self-signed certificates, since it is using the NodeJS as it's runtime and how now you can 🎉.
+I went with option one, option two might be better but I don't like adding environment variables if I don't have to. Vite is using the [http-proxy-3](https://github.com/sagemathinc/http-proxy-3), which is a nodeJS package, in their documentation they said set `secure` to `false` for self-signed certificates but this is only for HTTP 2, I'm native HTTP/HTTPS or HTTP 1.1 for local development which is good enough for me now.
 
 One more thing I'd like to mention, when NodeJS implemented this fix; they're following the [Chromium's policy](https://chromium.googlesource.com/chromium/src/+/main/net/data/ssl/chrome_root_store/faq.md#how-does-the-chrome-certificate-verifier-integrate-with-platform-trust-stores-for-local-trust-decisions) of where the certificates will be stored. I also checked as well. The certificates are in *Trust -> Trusted Root Certification Authorities* under the user profile. If this doesn't work for you this is the first place I'd check.  
 
@@ -642,7 +646,7 @@ One more thing I'd like to mention, when NodeJS implemented this fix; they're fo
 * [serilog/serilog-settings-configuration: A Serilog configuration provider that reads from Microsoft.Extensions.Configuration](https://github.com/serilog/serilog-settings-configuration)
 * [HTTP logging in .NET and ASP.NET Core | Microsoft Learn](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/http-logging/?view=aspnetcore-10.0)
 * [Unable to verify the first certificate, self-signed certificate not working? · Issue #4949 · usebruno/bruno](https://github.com/usebruno/bruno/issues/4949)
-* [Server Options | Vite<](https://vite.dev/config/server-options#server-https)
+* [Server Options | Vite](https://vite.dev/config/server-options#server-https)
 * [sagemathinc/http-proxy-3: Modern rewrite of node-proxy (the original nodejs http proxy server)](https://github.com/sagemathinc/http-proxy-3?tab=readme-ov-file#options)
 * [Node.js — Enterprise Network Configuration](https://nodejs.org/en/learn/http/enterprise-network-configuration#adding-ca-certificates-from-the-system-store)
 * [Node.js — Node.js v23.8.0 (Current)](https://nodejs.org/en/blog/release/v23.8.0)

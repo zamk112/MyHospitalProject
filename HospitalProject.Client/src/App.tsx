@@ -1,4 +1,4 @@
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import reactLogo from './assets/react.svg';
 import viteLogo from '/vite.svg';
 import './App.css';
@@ -15,19 +15,22 @@ function App() {
   const [count, setCount] = useState(0);
   const [forecasts, setForecasts] = useState<Forecast[]>();
   const [isPending, startTransition] = useTransition();
+  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
     const populateWeatherForecasts = async () => {
       const response = await fetch('weatherforecast');
-
-      if (response.ok){
+      if (response.ok) {
         const data = await response.json();
         startTransition(() => {
           setForecasts(data);
         });
       }
     };
-
+    
     populateWeatherForecasts();
   }, []);
 
@@ -83,4 +86,4 @@ function App() {
   )
 }
 
-export default App
+export default App;
