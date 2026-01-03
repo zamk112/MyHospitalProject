@@ -33,3 +33,4 @@ And I'm developing this code on Windows 11 ARM which is running on Parallels VM 
 
 # Table of Contents
 * [Initial Commit](./Documentation/00_InitCommit.md)
+* [Setting up for Local Development](./Documentation/01_SetupForLocalDevelopment.md)
