@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.HttpLogging;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,7 +12,17 @@ try
 {
     if (builder.Environment.IsDevelopment())
     {
-        builder.Services.AddHttpLogging(o => { });
+        builder.Services.AddHttpLogging(o => { 
+            o.LoggingFields = HttpLoggingFields.All; 
+            o.RequestHeaders.Add("Referer");
+            o.RequestHeaders.Add("sec-ch-ua-platform");
+            o.RequestHeaders.Add("sec-ch-ua");
+            o.RequestHeaders.Add("sec-ch-ua-mobile");
+            o.RequestHeaders.Add("sec-fetch-site");
+            o.RequestHeaders.Add("sec-fetch-mode");
+            o.RequestHeaders.Add("sec-fetch-dest");
+            o.RequestHeaders.Add("priority");
+        });
     }
 
     builder.Services.AddSerilog((services, lc) => lc
