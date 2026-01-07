@@ -1,10 +1,10 @@
 # Motivation
 Just want to give you a background for creating this project. At one of my previous jobs, the following happened:  
-* 2 Weeks before go live, I got handed a broken AngularJS and ASP.NET Core project.
+* 2 Weeks before go live of a massive application and infrastructure stack upgrade, I got handed a broken AngularJS and ASP.NET Core project.
 * Although I managed to make it to go-live it still had a lot of problems, but not going to mention what they were.
 * Because of those problems I had to rewrite the application again but I did with ReactJS with SSR and ASP.NET Core backend to make it work (there's a reason why I chose SSR, let's just say it was to make it work with their infrastructure).
 * I won't mention the details unless it's a job interview 😂.
-* I was close to finishing it but because working 60-80 hour weeks for almost five months, I ended up in the hospital with heart problems and kidney damage ☠️.
+* I was close to finishing it but because working 60-80 hour weeks for almost five months (doing my support work along with web development), I ended up in the hospital with heart problems and kidney damage ☠️.
 
 Due to the short amount of time I had and because I ended up in hospital, there's a lot of things that I could have done better and things I didn't get to finish. This project is for a next time (maybe) if I am in an situation where I need to develop an application with ReactJS and ASP.NET Core WebAPI and host it on IIS. So in this project I'll be mostly be focusing on:
 * Security,
@@ -27,10 +27,13 @@ Now that's out of the way, now I want to focus on the things I want to do with t
 * ACL with utilizing claims and roles,
 * Global Logging.
 
-I'm going to use VS Code for my development as well because, I like doing things the hard way when I'm learning especially when it comes to coding! And will be using the latest version of React (Typescript, Of course!) and ASP.NET Core.
+I'm going to use VS Code for my development as well because, I like doing things the hard way when I'm learning especially when it comes to coding! And will be using the latest version of React (Typescript, Of course!) and ASP.NET Core. But I used Visual Studio 2022 to generate the project at my previous job.
 
 And I'm developing this code on Windows 11 ARM which is running on Parallels VM which is running on my MacBook Air. Although I mentioned IIS, for local development and testing, I do plan (or at least try to) utilize IIS Express in order to get it close when the app is running on IIS Server.
+
+I've decided the type of web application that I want to build, which is a CRM for hospitals that manages their patient data.
 
 # Table of Contents
 * [Initial Commit](./Documentation/00_InitCommit.md)
 * [Setting up for Local Development](./Documentation/01_SetupForLocalDevelopment.md)
+* [IIS Express Setup](./Documentation/02_IISExpressSetup.md)
