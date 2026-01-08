@@ -13,7 +13,7 @@ if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
   throw new Error('Certificate not found.');
 }
 
-const target = 'https://localhost:7276';
+const target = 'https://localhost:44300';
 
 // https://vite.dev/config/
 export default defineConfig({
