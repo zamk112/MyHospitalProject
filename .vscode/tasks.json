@@ -2,12 +2,79 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "dotnet local dev build",
 			"type": "dotnet",
 			"task": "build ${workspaceFolder}/HospitalProject.Server/HospitalProject.Server.csproj /property:GenerateFullPaths=true /p:Configuration=Debug /p:Platform=AnyCPU /consoleloggerparameters:NoSummary",
 			"file": "${workspaceFolder}/HospitalProject.Server/HospitalProject.Server.csproj",
 			"group": "build",
 			"problemMatcher": [],
-			"label": "dotnet local dev build"
+		},
+		{
+			"label": "cmd dotnet publish dev build",
+			"type": "shell",
+			"command": "dotnet publish -c Debug",
+			"options": {
+				"cwd": "${workspaceFolder}/HospitalProject.Server"
+			}
+		},
+		{
+			"label": "dotnet update ASP.NET Core publish web.config",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy", "Bypass",
+				"-File", "${workspaceFolder}/HospitalProject.TaskScripts/ASPNETDotnetCoreWebConfigUpdate.ps1"
+			],
+			"options": {
+				"env": {
+					"ASP_DOTNET_CORE_WEB_CONFIG_FILE_PATH": "${workspaceFolder}/HospitalProject.Server/bin/Debug/net10.0/publish/web.config"
+				}
+			},
+			"dependsOn":[
+				"cmd dotnet publish dev build"
+			]
+		},
+		{
+			"label": "PS create logs directory in ASPNET Core dev published directory",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy", "Bypass",
+				"-File", "${workspaceFolder}/HospitalProject.TaskScripts/ASPNETDotnetCoreCreateLogsFolder.ps1"
+			],
+			"options": {
+				"env": {
+					"ASP_DOTNET_CORE_PUBLISH_PATH": "${workspaceFolder}/HospitalProject.Server/bin/Debug/net10.0/publish"
+				}
+			},
+			"dependsOn":[
+				"cmd dotnet publish dev build",
+				"dotnet update ASP.NET Core publish web.config"
+			]
+		},
+		{
+			"label": "PS Copy IIS Config Files",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy", "Bypass",
+				"-File", "${workspaceFolder}/HospitalProject.TaskScripts/CopyIISExpressConfigTask.ps1"
+			],
+			"options": {
+				"env": {
+					"WORKSPACE_CONFIG_DIRECTORY": "${workspaceFolder}/HospitalProject.IISConfiguration/IISExpressConfiguration"
+				}
+			}
+		},
+		{
+			"label": "PS Clean and Add Config",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy", "Bypass",
+				"-File", "${workspaceFolder}/HospitalProject.TaskScripts/"
+			],
 		}
+
 	]
-}
+} 

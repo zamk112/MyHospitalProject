@@ -1,7 +1,18 @@
-﻿param([Parameter(Mandatory=$true)][string]$Path,
-      [Parameter(Mandatory=$false)][string]$IISExpressDirectory="C:\Program Files\IIS Express\config\templates\PersonalWebServer"
-     )
+﻿param([Parameter(Mandatory=$false)][string]$Path=$env:WORKSPACE_CONFIG_DIRECTORY,
+      [Parameter(Mandatory=$false)][string]$IISExpressDirectory
+    )
 
+Push-Location $PSScriptRoot
+
+. .\IISExpressSharedConfig.ps1
+
+if ([string]::IsNullOrEmpty($IISExpressDirectory) -or [string]::IsNullOrWhiteSpace($IISExpressDirectory))
+{
+    $IISExpressDirectory = $Script:IISExpressDirectory
+}
+
+Write-Host "IIS Express Directory: $($IISExpressDirectory)" -ForegroundColor Cyan
+Write-Host "Project Config Directory: $($Path)" -ForegroundColor Cyan
 $exitCode = 0
 try
 {
@@ -34,5 +45,6 @@ catch {
 }
 finally
 {
+    Pop-Location
     exit $exitCode
 }
