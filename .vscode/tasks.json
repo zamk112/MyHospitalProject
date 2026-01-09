@@ -23,7 +23,7 @@
 			"command": "powershell",
 			"args": [
 				"-ExecutionPolicy", "Bypass",
-				"-File", "${workspaceFolder}/HospitalProject.TaskScripts/ASPNETDotnetCoreWebConfigUpdate.ps1"
+				"-File", "${workspaceFolder}/HospitalProject.TaskScripts/ASPNETDotnetCoreWebConfigUpdateTask.ps1"
 			],
 			"options": {
 				"env": {
@@ -40,7 +40,7 @@
 			"command": "powershell",
 			"args": [
 				"-ExecutionPolicy", "Bypass",
-				"-File", "${workspaceFolder}/HospitalProject.TaskScripts/ASPNETDotnetCoreCreateLogsFolder.ps1"
+				"-File", "${workspaceFolder}/HospitalProject.TaskScripts/ASPNETDotnetCoreCreateLogsFolderTask.ps1"
 			],
 			"options": {
 				"env": {
@@ -58,23 +58,44 @@
 			"command": "powershell",
 			"args": [
 				"-ExecutionPolicy", "Bypass",
-				"-File", "${workspaceFolder}/HospitalProject.TaskScripts/CopyIISExpressConfigTask.ps1"
+				"-File", "${workspaceFolder}/HospitalProject.TaskScripts/IISExpressCopyConfigTask.ps1"
 			],
 			"options": {
 				"env": {
-					"WORKSPACE_CONFIG_DIRECTORY": "${workspaceFolder}/HospitalProject.IISConfiguration/IISExpressConfiguration"
+					"IIS_EXPRESS_WORKSPACE_CONFIG_DIRECTORY": "${workspaceFolder}/HospitalProject.IISConfiguration/IISExpressConfiguration"
 				}
 			}
 		},
 		{
-			"label": "PS Clean and Add Config",
+			"label": "PS Clean Config",
 			"type": "shell",
 			"command": "powershell",
 			"args": [
 				"-ExecutionPolicy", "Bypass",
-				"-File", "${workspaceFolder}/HospitalProject.TaskScripts/"
+				"-File", "${workspaceFolder}/HospitalProject.TaskScripts/IISExpressConfigCleanup.ps1"
 			],
+			"options": {
+				"env": {
+					"IIS_EXPRESS_WORKSPACE_CONFIG_DIRECTORY": "${workspaceFolder}/HospitalProject.IISConfiguration/IISExpressConfiguration"
+				}
+			},
+			"dependsOn":[
+				"PS Copy IIS Config Files"
+			]
+		},
+		{
+			"label": "PS Add App Pool for ASP.NET Core",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy", "Bypass",
+				"-File", "${workspaceFolder}/HospitalProject.TaskScripts/IISExpressAddAppPoolTask.ps1"
+			],
+			"options": {
+				"env": {
+					"IIS_EXPRESS_WORKSPACE_CONFIG_DIRECTORY": "${workspaceFolder}/HospitalProject.IISConfiguration/IISExpressConfiguration"
+				}
+			}
 		}
-
 	]
 } 
