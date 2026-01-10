@@ -67,7 +67,7 @@ try {
         }
     }
     else {
-        throw $output
+        Write-Warning $output
     }
     
 }
