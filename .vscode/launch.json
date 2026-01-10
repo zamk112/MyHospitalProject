@@ -20,7 +20,39 @@
             },
         },
         {
-            "name": "Launch Reach App (Dev)",
+            "name": "Attach to IIS Express Process",
+            "type": "coreclr",
+            "request": "attach",
+            "processName": "iisexpress.exe",
+            "internalConsoleOptions": "openOnFirstSessionStart",
+            "symbolOptions": {
+                "searchPaths": [
+                    "${workspaceFolder}/HospitalProject.Server/bin/Debug/net10.0/publish"
+                ],
+                "searchMicrosoftSymbolServer": false,
+                "searchNuGetOrgSymbolServer": false
+            },
+        },        
+        {
+            "name": "Launch IISExpress",
+            "program": "${workspaceFolder}/HospitalProject.TaskAndLaunchScripts/IISExpressLaunch.js",
+            "preLaunchTask": "PS Add ASP.NET Core Site in IIS Express Config",
+            "request": "launch",
+            "type": "node",
+            "console": "integratedTerminal",
+            "env": {
+                "IISEXPRESS_SITENAME": "HospitalProject.Server.Dev",
+                "IISEXPRESS_CONFIG_PATH": "${workspaceFolder}/HospitalProject.IISConfiguration/IISExpressConfiguration/applicationhost.config"
+            },
+            "serverReadyAction":{
+                "name": "Attach to IIS Express Process",
+                "action": "startDebugging",
+                "pattern": "IIS running on port ([0-9]+)",
+                "killOnServerStop": false,
+            }
+        },
+        {
+            "name": "Launch Reach App (Local Dev 1)",
             "type": "node",
             "request": "launch",
             "runtimeExecutable": "npm",
@@ -37,7 +69,30 @@
                 "action": "debugWithEdge"
             },
             "env": {
-                "NODE_USE_SYSTEM_CA": "1"
+                "NODE_USE_SYSTEM_CA": "1",
+                "ASPNETCORE_HTTPS_PORT": "7276"
+            }
+        },
+        {
+            "name": "Launch Reach App (Local Dev 2)",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["run","dev"],
+            "cwd": "${workspaceFolder}/HospitalProject.Client",
+            "console": "integratedTerminal",
+            "skipFiles": [
+                "${workspaceFolder}/node_modules/**/*.js"
+            ],
+            "serverReadyAction": {
+                "pattern": ".+Local:.+(https?:\/\/.+)",
+                "uriFormat": "%s",
+                "webRoot": "${workspaceFolder}/HospitalProject.Client",
+                "action": "debugWithEdge"
+            },
+            "env": {
+                "NODE_USE_SYSTEM_CA": "1",
+                "ASPNETCORE_HTTPS_PORT": "44300"
             }
         },
     ],
@@ -46,7 +101,14 @@
             "name": "Launch Both Server and Client (Local Development)",
             "configurations": [
                 "ASP.NET Core Launch (https)",
-                "Launch Reach App (Dev)",
+                "Launch Reach App (Local Dev 1)",
+            ]
+        },
+        {
+            "name": "Launch IISExpress and Client",
+            "configurations": [
+                "Launch IISExpress",
+                "Launch Reach App (Local Dev 2)",
             ]
         }
     ]

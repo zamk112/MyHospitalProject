@@ -23,7 +23,7 @@
 			"command": "powershell",
 			"args": [
 				"-ExecutionPolicy", "Bypass",
-				"-File", "${workspaceFolder}/HospitalProject.TaskScripts/ASPNETDotnetCoreWebConfigUpdateTask.ps1"
+				"-File", "${workspaceFolder}/HospitalProject.TaskAndLaunchScripts/ASPNETDotnetCoreWebConfigUpdateTask.ps1"
 			],
 			"options": {
 				"env": {
@@ -40,7 +40,7 @@
 			"command": "powershell",
 			"args": [
 				"-ExecutionPolicy", "Bypass",
-				"-File", "${workspaceFolder}/HospitalProject.TaskScripts/ASPNETDotnetCoreCreateLogsFolderTask.ps1"
+				"-File", "${workspaceFolder}/HospitalProject.TaskAndLaunchScripts/ASPNETDotnetCoreCreateLogsFolderTask.ps1"
 			],
 			"options": {
 				"env": {
@@ -58,13 +58,14 @@
 			"command": "powershell",
 			"args": [
 				"-ExecutionPolicy", "Bypass",
-				"-File", "${workspaceFolder}/HospitalProject.TaskScripts/IISExpressCopyConfigTask.ps1"
+				"-File", "${workspaceFolder}/HospitalProject.TaskAndLaunchScripts/IISExpressCopyConfigTask.ps1"
 			],
 			"options": {
 				"env": {
 					"IIS_EXPRESS_WORKSPACE_CONFIG_DIRECTORY": "${workspaceFolder}/HospitalProject.IISConfiguration/IISExpressConfiguration"
 				}
-			}
+			},
+			"dependsOn":["PS create logs directory in ASPNET Core dev published directory"]
 		},
 		{
 			"label": "PS Clean Config",
@@ -72,7 +73,7 @@
 			"command": "powershell",
 			"args": [
 				"-ExecutionPolicy", "Bypass",
-				"-File", "${workspaceFolder}/HospitalProject.TaskScripts/IISExpressConfigCleanup.ps1"
+				"-File", "${workspaceFolder}/HospitalProject.TaskAndLaunchScripts/IISExpressConfigCleanup.ps1"
 			],
 			"options": {
 				"env": {
@@ -84,18 +85,86 @@
 			]
 		},
 		{
-			"label": "PS Add App Pool for ASP.NET Core",
+			"label": "PS Add App Pool in IIS Express Config for ASP.NET Core",
 			"type": "shell",
 			"command": "powershell",
 			"args": [
 				"-ExecutionPolicy", "Bypass",
-				"-File", "${workspaceFolder}/HospitalProject.TaskScripts/IISExpressAddAppPoolTask.ps1"
+				"-File", "${workspaceFolder}/HospitalProject.TaskAndLaunchScripts/IISExpressAddAppPoolTask.ps1", "-AspDotNetCoreAppPoolName", "${input:AppPoolName}"
 			],
 			"options": {
 				"env": {
-					"IIS_EXPRESS_WORKSPACE_CONFIG_DIRECTORY": "${workspaceFolder}/HospitalProject.IISConfiguration/IISExpressConfiguration"
+					"IIS_EXPRESS_WORKSPACE_CONFIG_DIRECTORY": "${workspaceFolder}/HospitalProject.IISConfiguration/IISExpressConfiguration",
+					"ASP_DOT_NET_APP_POOL_RUN_TIME_VERSION": "",
+					"ASP_DOT_NET_APP_POOL_PIPELINE_MODE": "Integrated"
 				}
-			}
+			},
+			"dependsOn":[
+				"PS Copy IIS Config Files",
+				"PS Clean Config",
+			]			
+		},
+		{
+			"label": "PS Add ASP.NET Core Site in IIS Express Config",
+			"type": "shell",
+			"command": "powershell",
+			"args": [ 
+				"-ExecutionPolicy", "Bypass",
+				"-File", "${workspaceFolder}/HospitalProject.TaskAndLaunchScripts/IISExpressAddSiteTask.ps1", "-WebsiteName", "${input:WebsiteName}", "-AspDotNetCoreAppPoolName", "${input:AppPoolName}", "-AspDotNetCoreURL", "${input:AspDotNetCoreURL}", "-AspDotNetCoreAppProtocols", "${input:AspDotNetCoreAppProtocols}"
+			],
+			"options": {
+				"env": {
+					"IIS_EXPRESS_WORKSPACE_CONFIG_DIRECTORY": "${workspaceFolder}/HospitalProject.IISConfiguration/IISExpressConfiguration",
+					"ASP_DOT_NET_CORE_PUBLISH_BUILD_PATH": "${workspaceFolder}/HospitalProject.Server/bin/Debug/net10.0/publish"
+				}
+			},
+			"dependsOn":[
+				"PS Add App Pool in IIS Express Config for ASP.NET Core"
+			]
+		},
+		{
+			"label": "Launch IIS Express",
+			"type": "shell",
+			"command":"node",
+			"args": ["${workspaceFolder}/HospitalProject.TaskAndLaunchScripts/IISExpressLaunch.js"],
+			"options": {
+				"env": {
+					"IISEXPRESS_SITENAME": "HospitalProject.Server.Dev",
+					"IISEXPRESS_CONFIG_PATH": "${workspaceFolder}/HospitalProject.IISConfiguration/IISExpressConfiguration/applicationhost.config"
+				},
+			},
+			"isBackground": true,
+			"dependsOn":[
+				"PS Add App Pool in IIS Express Config for ASP.NET Core",
+				"PS Add ASP.NET Core Site in IIS Express Config"
+			],
+		}
+	],
+	"inputs": [
+		{
+			"id": "AppPoolName",
+			"type": "promptString",
+			"description": "Name of the App Pool for ASP.NET Core Project",
+			"default": "AspDotNetCoreAppPool"
+		},
+		{
+			"id": "WebsiteName",
+			"type": "promptString",
+			"description": "Name of the ASP.NET Core Site hosted on IIS Express",
+			"default": "HospitalProject.Server.Dev"
+		},
+		{
+			"id": "AspDotNetCoreURL",
+			"type": "promptString",
+			"description": "URL for ASP.NET Core Site hosted on IIS Express",
+			"default": "https://localhost:44300"
+		},
+		{
+			"id": "AspDotNetCoreAppProtocols",
+			"type": "pickString",
+			"description": "ASP.NET Core Hosting protocol (http or https)",
+			"options": ["http", "https"],
+			"default": "https"
 		}
 	]
 } 

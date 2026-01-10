@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
 import fs from 'node:fs';
+import { env } from "process";
 
 
 const certName = 'hospitalproject.client';
@@ -13,7 +14,7 @@ if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
   throw new Error('Certificate not found.');
 }
 
-const target = 'https://localhost:44300';
+const target = env.ASPNETCORE_HTTPS_PORT ? `https://localhost:${env.ASPNETCORE_HTTPS_PORT}` : 'https://localhost:443';
 
 // https://vite.dev/config/
 export default defineConfig({
