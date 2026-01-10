@@ -110,12 +110,12 @@
 			"command": "powershell",
 			"args": [ 
 				"-ExecutionPolicy", "Bypass",
-				"-File", "${workspaceFolder}/HospitalProject.TaskAndLaunchScripts/IISExpressAddSiteTask.ps1", "-WebsiteName", "${input:WebsiteName}", "-AspDotNetCoreAppPoolName", "${input:AppPoolName}", "-AspDotNetCoreURL", "${input:AspDotNetCoreURL}", "-AspDotNetCoreAppProtocols", "${input:AspDotNetCoreAppProtocols}"
+				"-File", "${workspaceFolder}/HospitalProject.TaskAndLaunchScripts/IISExpressAddSiteTask.ps1", "-AspDotNetCoreSiteName", "${input:AspDotNetCoreSiteName}", "-AspDotNetCoreAppPoolName", "${input:AppPoolName}", "-AspDotNetCoreURL", "${input:AspDotNetCoreURL}", "-AspDotNetCoreAppProtocols", "${input:AspDotNetCoreAppProtocols}"
 			],
 			"options": {
 				"env": {
 					"IIS_EXPRESS_WORKSPACE_CONFIG_DIRECTORY": "${workspaceFolder}/HospitalProject.IISConfiguration/IISExpressConfiguration",
-					"ASP_DOT_NET_CORE_PUBLISH_BUILD_PATH": "${workspaceFolder}/HospitalProject.Server/bin/Debug/net10.0/publish"
+					"ASP_DOT_NET_CORE_PUBLISH_BUILD_PATH": "${workspaceFolder}\\HospitalProject.Server\\bin\\Debug\\net10.0\\publish"
 				}
 			},
 			"dependsOn":[
@@ -148,7 +148,7 @@
 			"default": "AspDotNetCoreAppPool"
 		},
 		{
-			"id": "WebsiteName",
+			"id": "AspDotNetCoreSiteName",
 			"type": "promptString",
 			"description": "Name of the ASP.NET Core Site hosted on IIS Express",
 			"default": "HospitalProject.Server.Dev"

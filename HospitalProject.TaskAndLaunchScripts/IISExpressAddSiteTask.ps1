@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$WebsiteName,
+param([Parameter(Mandatory=$true)][string]$AspDotNetCoreSiteName,
       [Parameter(Mandatory=$true)][string]$AspDotNetCoreAppPoolName,
       [Parameter(Mandatory=$true)][string]$AspDotNetCoreURL,
       [Parameter(Mandatory=$true)][string]$AspDotNetCoreAppProtocols,
@@ -18,7 +18,7 @@ if ([string]::IsNullOrWhiteSpace($IISExpressAppCmdPath) -or [string]::IsNullOrEm
     $IISExpressAppCmdPath = $Script:IISExpressAppCmdPath
 }
 
-Write-Host "ASP.NET Core Website Name: $($WebsiteName)" -ForegroundColor Cyan
+Write-Host "ASP.NET Core Website Name: $($AspDotNetCoreSiteName)" -ForegroundColor Cyan
 Write-Host "ASP.NET Core App Pool Name: $($AspDotNetCoreAppPoolName)" -ForegroundColor Cyan
 Write-Host "ASP.NET Core URL: $($AspDotNetCoreURL)" -ForegroundColor Cyan
 Write-Host "ASP.NET Core App Protocol(s): $($AspDotNetCoreAppProtocols)" -ForegroundColor Cyan
@@ -44,7 +44,7 @@ try {
     if ($output -is [System.Object[]] -or $output -is [System.Array] -or $output -is [string[]])
     {
         if ($($output -join "") -match "^ERROR \( message:Can not set attribute `"\w+`" to value `"\w*`"\.\. Reason: Invalid site name(?:\s*\. \))?$"){
-            Write-Warning $($output -join "")
+            throw $($output -join "")
         }
         else {
             $output.ForEach{
@@ -61,7 +61,7 @@ try {
 
                 if ($successMatch -eq $false)
                 {
-                    throw $_
+                    Write-Warning $_
                 }
             }
         }
