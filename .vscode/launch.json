@@ -41,6 +41,7 @@
             "type": "node",
             "console": "integratedTerminal",
             "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
                 "IISEXPRESS_SITENAME": "HospitalProject.Server.Dev",
                 "IISEXPRESS_CONFIG_PATH": "${workspaceFolder}/HospitalProject.IISConfiguration/IISExpressConfiguration/applicationhost.config"
             },
